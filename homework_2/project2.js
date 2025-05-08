@@ -7,10 +7,11 @@ function GetTransform( positionX, positionY, rotation, scale ) {
 	let cosTheta = Math.cos(radians);
 	let sinTheta = Math.sin(radians)
 
+	// REMEMBER: we are using column-major order in our matrices
 	return [
-		scale * cosTheta, scale * sinTheta, 0,
-		scale * -sinTheta, scale * cosTheta, 0,
-		positionX, positionY, 1
+		scale * cosTheta, scale * sinTheta, 0, // first column
+		scale * -sinTheta, scale * cosTheta, 0, // second column
+		positionX, positionY, 1 // third column
 	];
 }
 
