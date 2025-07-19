@@ -1,0 +1,223 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: #000;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+#gameContainer {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    min-width: 180px;
+}
+
+#instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    color: white;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 12px;
+    max-width: 320px;
+    line-height: 1.4;
+}
+
+#weatherControls {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    z-index: 100;
+    background: rgba(0,0,0,0.7);
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    min-width: 180px;
+}
+
+#windControls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    color: white;
+    z-index: 100;
+    background: rgba(0,0,0,0.8);
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 12px;
+    max-width: 200px;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.weather-button {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: white;
+    padding: 8px 16px;
+    margin: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.weather-button:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.5);
+}
+
+.weather-button.active {
+    background: rgba(100,150,255,0.5);
+    border-color: rgba(100,150,255,0.8);
+}
+
+/* Stili per i controlli del vento */
+.wind-button, .wind-pattern-btn {
+    background: rgba(135,206,235,0.2);
+    border: 1px solid rgba(135,206,235,0.4);
+    color: white;
+    padding: 5px 10px;
+    margin: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.3s ease;
+    width: calc(100% - 6px);
+    text-align: center;
+}
+
+.wind-button:hover, .wind-pattern-btn:hover {
+    background: rgba(135,206,235,0.4);
+    border-color: rgba(135,206,235,0.6);
+    transform: translateY(-1px);
+}
+
+.wind-button:active, .wind-pattern-btn:active {
+    transform: translateY(0);
+    background: rgba(135,206,235,0.6);
+}
+
+.wind-pattern-btn {
+    padding: 3px 6px;
+    font-size: 9px;
+    width: calc(50% - 4px);
+    display: inline-block;
+    margin: 1px;
+}
+
+/* Evidenziazione pattern attivo */
+.wind-pattern-btn.active {
+    background: rgba(255,215,0,0.5);
+    border-color: rgba(255,215,0,0.8);
+    color: #000;
+    font-weight: bold;
+}
+
+/* Indicatori vento attivo */
+#windStatus {
+    font-weight: bold;
+    color: #87CEEB;
+}
+
+#windPattern {
+    font-style: italic;
+    color: #ADD8E6;
+}
+
+/* Animazioni per effetti visivi */
+@keyframes windPulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; }
+    100% { opacity: 0.7; }
+}
+
+.wind-active #windControls {
+    animation: windPulse 3s ease-in-out infinite;
+}
+
+/* Responsive design per schermi più piccoli */
+@media (max-width: 1200px) {
+    #windControls {
+        bottom: 200px;
+        right: 10px;
+        max-width: 160px;
+        font-size: 10px;
+    }
+    
+    .wind-button {
+        font-size: 9px;
+        padding: 4px 8px;
+    }
+    
+    .wind-pattern-btn {
+        font-size: 8px;
+        padding: 2px 4px;
+    }
+}
+
+@media (max-width: 800px) {
+    #instructions {
+        bottom: 250px;
+        max-width: 280px;
+        font-size: 11px;
+    }
+    
+    #windControls {
+        bottom: 180px;
+        max-width: 140px;
+    }
+}
+
+.wind-button:hover::before {
+    content: "💨 ";
+}
+
+.wind-pattern-btn:hover {
+    box-shadow: 0 2px 8px rgba(135,206,235,0.3);
+}
+
+/* Indicatori di stato */
+.wind-enabled {
+    color: #00ff00 !important;
+}
+
+.wind-disabled {
+    color: #ff6b6b !important;
+}
+
+/* Stili per tooltip */
+.wind-button[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+canvas {
+    display: block;
+}

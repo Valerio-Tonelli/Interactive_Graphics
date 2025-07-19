@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planetary Explorer - Interactive Graphics Project</title>
+    <author>Valerio Tonelli</author>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div>Time: <span id="timeDisplay">12:00</span></div>
+            <div>Resources: <span id="resourceCount">0</span></div>
+            <div>Height: <span id="heightDisplay">0</span>m</div>
+            <div>Weather: <span id="weatherStatus">Clear</span></div>
+            <div>Wind: <span id="windStatus">Light Breeze</span></div>
+            <div>Pattern: <span id="windPattern">gentle</span></div>
+        </div>
+        
+        <div id="weatherControls">
+            <strong>Weather Controls:</strong><br>
+            <button class="weather-button" id="toggleRain">Toggle Rain (R)</button><br>
+            <button class="weather-button" id="lightRain">Light Rain</button>
+            <button class="weather-button" id="heavyRain">Heavy Rain</button><br>
+            <button class="weather-button" id="clearWeather">Clear Weather</button>
+        </div>
+        
+        <div id="windControls">
+            <strong>💨 Wind Controls:</strong><br>
+            <button class="wind-button" onclick="game.toggleWind()">Toggle Wind (Shift+W)</button><br>
+            <div style="margin-top: 8px;">
+                <strong>Patterns (1-5):</strong><br>
+                <button class="wind-pattern-btn" onclick="game.setWindPattern('calm')">Calm</button>
+                <button class="wind-pattern-btn" onclick="game.setWindPattern('gentle')">Gentle</button>
+                <button class="wind-pattern-btn" onclick="game.setWindPattern('moderate')">Moderate</button><br>
+                <button class="wind-pattern-btn" onclick="game.setWindPattern('strong')">Strong</button>
+                <button class="wind-pattern-btn" onclick="game.setWindPattern('storm')">Storm</button>
+            </div>
+            <div style="margin-top: 8px;">
+                <strong>Direction (Ctrl+Arrow):</strong><br>
+                <div style="text-align: center; font-family: monospace;">
+                    <div>↑N</div>
+                    <div>←W&nbsp;&nbsp;&nbsp;→E</div>
+                    <div>↓S</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="instructions">
+            <strong>Controlli Base:</strong><br>
+            WASD - Movimento<br>
+            Mouse - Guarda intorno<br>
+            Spazio - Salta<br>
+            E - Raccogli risorse<br>
+            T - Cambia velocità tempo<br>
+            Z - Ferma tempo (11:00)<br>
+            <br>
+            <strong>Meteo & Vento:</strong><br>
+            R - Attiva/Disattiva pioggia<br>
+            Shift+W - Toggle vento<br>
+            1-5 - Pattern intensità vento<br>
+            Ctrl+Frecce - Direzione vento<br>
+            <br>
+            <strong>Animali:</strong><br>
+            O - Spawna animale casuale<br>
+            I - Toggle sistema animali<br>
+            U - Rimuovi tutti gli animali<br>
+            Y - Pausa/riprendi spawning<br>
+            H - Fai ululare i lupi<br>
+            L - Test modello lupo<br>
+            P - Debug terreno
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.178.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.178.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module" src="Game.js"></script>
+</body>
+</html>
