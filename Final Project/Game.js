@@ -691,9 +691,10 @@ class PlanetaryExplorer {
             const z = vertices[i + 2];
             
             let height = 0;
-            height += this.noise(x * 0.01, z * 0.01) * 20;
-            height += this.noise(x * 0.05, z * 0.05) * 8;
-            height += this.noise(x * 0.1, z * 0.1) * 3;
+            // fBm
+            height += this.noise(x * 0.01, z * 0.01) * 20; // montagne principali
+            height += this.noise(x * 0.05, z * 0.05) * 8; // colline più piccole
+            height += this.noise(x * 0.1, z * 0.1) * 3; // dettagli minori
             
             vertices[i + 1] = height;
         }
@@ -742,7 +743,7 @@ class PlanetaryExplorer {
             let rockR = 100, rockG = 100, rockB = 100;
             let sandR = 180, sandG = 160, sandB = 100;
             
-            const variation = this.noise(x * 0.1, y * 0.1) * 0.3 + 0.7; // genera valori tra 0.7 e 1.0
+            const variation = this.noise(x * 0.1, y * 0.1) * 0.3 + 0.7;
             grassR *= variation; grassG *= variation; grassB *= variation;
             rockR *= variation; rockG *= variation; rockB *= variation;
             sandR *= variation; sandG *= variation; sandB *= variation;
@@ -766,7 +767,7 @@ class PlanetaryExplorer {
             imageData.data[i] = Math.max(0, Math.min(255, r)); // Red
             imageData.data[i + 1] = Math.max(0, Math.min(255, g)); // Green
             imageData.data[i + 2] = Math.max(0, Math.min(255, b)); // Blue
-            imageData.data[i + 3] = 255; // Alpha (opaco)
+            imageData.data[i + 3] = 255; // Alpha --> opacità
         }
         
         ctx.putImageData(imageData, 0, 0);
@@ -937,10 +938,11 @@ class PlanetaryExplorer {
 
                     float sunDot = dot(direction, normalize(sunPosition)); // prodotto scalare tra direzione pixel e direzione sole
                     
+                    // interpolazione lineare
                     vec3 skyColor = mix(
-                        vec3(0.1, 0.1, 0.3), // Colore notturno (blu scuro)
-                        vec3(0.5, 0.7, 1.0), // Colore diurno (azzurro)
-                        max(0.0, sunPosition.y / 200.0) // Fattore di interpolazione
+                        vec3(0.1, 0.1, 0.3), // colore notturno
+                        vec3(0.5, 0.7, 1.0), // colore diurno
+                        max(0.0, sunPosition.y / 200.0) // fattore di interpolazione che dipende dalla posizione del sole
                     );
                     
                     float sunGlow = pow(max(0.0, sunDot), 32.0) * 0.5;
@@ -1275,6 +1277,7 @@ class PlanetaryExplorer {
         
         if (moveVector.length() > 0) {
             moveVector.normalize();
+            // ruota il vettore di movimento attorno all'asse verticale Y in base alla posizione orizzontale del mouse
             moveVector.multiplyScalar(this.player.moveSpeed);
             
             moveVector.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mouse.x);
@@ -1282,6 +1285,7 @@ class PlanetaryExplorer {
             this.player.velocity.x = moveVector.x;
             this.player.velocity.z = moveVector.z;
         } else {
+            // se non ci sono input, creo un effetto di attrito
             this.player.velocity.x *= 0.8;
             this.player.velocity.z *= 0.8;
         }
@@ -1333,6 +1337,7 @@ class PlanetaryExplorer {
         const clampedX = Math.max(-halfSize, Math.min(halfSize, x));
         const clampedZ = Math.max(-halfSize, Math.min(halfSize, z));
         
+        // convertiamo coordinate mondiali in coordinate di griglia
         const mapX = ((clampedX + halfSize) / this.terrainSize) * this.terrainSegments;
         const mapZ = ((clampedZ + halfSize) / this.terrainSize) * this.terrainSegments;
         
@@ -1341,18 +1346,18 @@ class PlanetaryExplorer {
         const x2 = Math.min(x1 + 1, this.terrainSegments);
         const z2 = Math.min(z1 + 1, this.terrainSegments);
         
-        const fx = mapX - x1;
-        const fz = mapZ - z1;
+        const fx = mapX - x1; // quanto siamo spostati verso destra
+        const fz = mapZ - z1; // quanto siamo spostati verso l'alto
         
         const h1 = this.getHeightAtGridPosition(x1, z1);
         const h2 = this.getHeightAtGridPosition(x2, z1);
         const h3 = this.getHeightAtGridPosition(x1, z2);
         const h4 = this.getHeightAtGridPosition(x2, z2);
-        
-        const h12 = h1 * (1 - fx) + h2 * fx;
-        const h34 = h3 * (1 - fx) + h4 * fx;
 
-        const finalHeight = h12 * (1 - fz) + h34 * fz;
+        const h12 = h1 * (1 - fx) + h2 * fx; // interpolazione tra h1 e h2
+        const h34 = h3 * (1 - fx) + h4 * fx; // interpolazione tra h3 e h4
+
+        const finalHeight = h12 * (1 - fz) + h34 * fz; // interpolazione finale verticale
         
         return finalHeight;
     }
@@ -1364,7 +1369,10 @@ class PlanetaryExplorer {
         const index = clampedZ * (this.terrainSegments + 1) + clampedX;
         
         const vertices = this.terrainGeometry.attributes.position.array;
+        // ogni vertice occupa 3 posizioni consecutive
         if (index * 3 + 1 < vertices.length) {
+            // index * 3 ---> posizione iniziale
+            // index * 3 + 1 ---> componente Y (altezza)
             return vertices[index * 3 + 1];
         }
         
@@ -1378,9 +1386,10 @@ class PlanetaryExplorer {
         const h3 = this.getHeightAtPosition(x, z - offset);
         const h4 = this.getHeightAtPosition(x, z + offset);
         
-        const dx = (h2 - h1) / (offset * 2);
-        const dz = (h4 - h3) / (offset * 2);
-        
+        // offset * 2 ---> distanza totale
+        const dx = (h2 - h1) / (offset * 2); // variazione di altezza lungo l'asse x
+        const dz = (h4 - h3) / (offset * 2); // variazione di altezza lungo l'asse z
+        // pitagora per calcolare la pendenza
         return Math.sqrt(dx * dx + dz * dz);
     }
     

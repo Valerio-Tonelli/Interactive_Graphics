@@ -23,7 +23,6 @@ export class AnimalSystem {
                 size: 1,
                 speed: 0.05,
                 behavior: 'predator',
-                energy: 150,
                 lifespan: 10000,
             }
         };
@@ -71,10 +70,6 @@ export class AnimalSystem {
         }
     }
     
-    // =============================================
-    // GESTIONE ANIMALI
-    // =============================================
-    
     spawnAnimal(type, x, z) {
         const animalData = this.animalTypes[type];
         if (!animalData) return null;
@@ -86,25 +81,18 @@ export class AnimalSystem {
         mesh.position.set(x, y, z);
         this.scene.add(mesh);
         
-        // Crea oggetto animale
+        // crea oggetto animale
         const animal = {
-            // Identificazione
             id: this.generateId(),
             type: type,
             data: animalData,
             mesh: mesh,
             
-            // Stato fisico
             position: new THREE.Vector3(x, y, z),
             velocity: new THREE.Vector3(),
             acceleration: new THREE.Vector3(),
             onGround: true,
             
-            // Stato biologico
-            health: animalData.energy,
-            energy: animalData.energy,
-            thirst: 100,
-            hunger: 100,
             age: 0,
             maxAge: animalData.lifespan,
             
@@ -127,33 +115,23 @@ export class AnimalSystem {
     }
     
     removeAnimal(animal) {
-        // Rimuovi dalla scena
         this.scene.remove(animal.mesh);
         
-        // Rimuovi dall'array
         const index = this.animals.indexOf(animal);
         if (index > -1) {
             this.animals.splice(index, 1);
         }
 
-        // aggiorna conteggio animali
         this.dispatchStatsUpdate();
     }
-    
-    // =============================================
-    // CREAZIONE MESH
-    // =============================================
-    
+
     createAnimalMesh(type, animalData) {
         if (type === 'wolf' && this.wolfModelTemplate) { 
             return this.createWolfFromModel(animalData);
         }
     }
     
-    // =============================================
-    // SISTEMA PRINCIPALE DI AGGIORNAMENTO
-    // =============================================
-    
+
     update() {
         if (!this.enabled) return;
     
@@ -169,19 +147,12 @@ export class AnimalSystem {
             
         });
         
-        // Gestione popolazione
         this.managePopulation();
     
-        
-        // Cleanup periodico
         if (this.frameCount % 60 === 0) {
             this.performCleanup();
         }
     }
-    
-    // =============================================
-    // SISTEMA COMPORTAMENTALE
-    // =============================================
     
     updateAnimalBehavior(animal) {
         // Seleziona comportamento basato su priorità
@@ -209,7 +180,6 @@ export class AnimalSystem {
     }
     
     behaviorWander(animal) {
-        // Inizializza stato wander se non esiste
         if (!animal.wanderState) {
             animal.wanderState = {
                 waypoint: null,
@@ -217,7 +187,7 @@ export class AnimalSystem {
                 lastValidWaypoint: null,
                 waypointReachDistance: 2,
                 minWaypointDistance: 5,
-                maxWaypointDistance: 15
+                maxWaypointDistance: 20
             };
         }
         
@@ -258,14 +228,7 @@ export class AnimalSystem {
                 }
             }
         }
-        
-        // Recupera energia lentamente
-        animal.energy = Math.min(animal.data.energy, animal.energy + 0.05);
     }
-
-    // =============================================
-    // GENERAZIONE WAYPOINT
-    // =============================================
 
     generateValidWaypoint(animal, wanderState) {
         const maxAttempts = 8;
@@ -289,61 +252,36 @@ export class AnimalSystem {
         return null;
     }
 
-    // =============================================
-    // VALIDAZIONE WAYPOINT
-    // =============================================
-
     isValidWaypointPosition(x, z, animal) {
         const groundHeight = this.getHeightAtPosition(x, z);
         const slope = this.getTerrainSlope ? this.getTerrainSlope(x, z) : 0;
         const currentHeight = animal.position.y;
         
-        // Criteri di validità
         const heightDifference = Math.abs(groundHeight - currentHeight);
-        const isReasonableHeight = heightDifference < 5; // Non troppo alto/basso
-        const isNotTooSteep = slope < 0.4; // Pendenza accettabile
-        const isAboveWater = groundHeight > 0; // Sopra livello acqua
+        const isReasonableHeight = heightDifference < 5;
+        const isNotTooSteep = slope < 0.4;
+        const isAboveWater = groundHeight > 0;
         
         return isReasonableHeight && isNotTooSteep && isAboveWater;
     }
 
-    // =============================================
-    // SMOOTH MOVEMENT HELPER
-    // =============================================
-
-    smoothDirectionChange(currentDirection, targetDirection, smoothFactor = 0.1) {
-        return new THREE.Vector3()
-            .lerpVectors(currentDirection, targetDirection, smoothFactor);
-    }   
-    
-    // =============================================
-    // FISICA
-    // =============================================
-    
     updateAnimalPhysics(animal) {        
-        // Applica forze
         animal.velocity.add(animal.acceleration);
         
-        // Gravità per animali terrestri
-        if (animal.data.behavior !== 'flying') {
-            animal.velocity.y -= 0.02;
-        }
+        animal.velocity.y -= 0.02; // gravità
         
-        // Attrito dinamico basato su pendenza
         const slope = this.getTerrainSlope ? this.getTerrainSlope(animal.position.x, animal.position.z) : 0;
         const frictionFactor = 0.95 - (slope * 0.1); // Più attrito su pendenze
         animal.velocity.multiplyScalar(Math.max(0.85, frictionFactor));
         
-        // Limita velocità
         const maxSpeed = animal.data.speed * 1.3;
         if (animal.velocity.length() > maxSpeed) {
             animal.velocity.normalize().multiplyScalar(maxSpeed);
         }
         
-        // aggiorna posizione
         animal.position.add(animal.velocity);
         
-        // Collision detection
+        // collision detection con il terreno
         const groundHeight = this.getHeightAtPosition(animal.position.x, animal.position.z);
         
         if (animal.position.y <= groundHeight) {
@@ -354,9 +292,7 @@ export class AnimalSystem {
             animal.onGround = false;
         }
         
-        // Stabilizzazione su pendenze
         if (slope > 0.3 && animal.onGround) {
-            // Applica forza anti-scivolamento
             const slopeDirection = this.getSlopeDirection(animal.position.x, animal.position.z);
             if (slopeDirection) {
                 const antiSlipForce = slopeDirection.multiplyScalar(-slope * 0.1);
@@ -364,22 +300,18 @@ export class AnimalSystem {
             }
         }
         
-        // aggiorna mesh position
         animal.mesh.position.copy(animal.position);
         
-        // Orienta verso direzione movimento con smoothing
         if (animal.velocity.length() > 0.01) {
             const lookDirection = animal.velocity.clone().normalize();
             const currentRotation = animal.mesh.rotation.y;
             const targetRotation = Math.atan2(lookDirection.x, lookDirection.z);
             
-            // Smooth rotation
             const rotationDiff = targetRotation - currentRotation;
             const smoothedRotation = currentRotation + rotationDiff * 0.1;
             animal.mesh.rotation.y = smoothedRotation;
         }
         
-        // Controllo se bloccato
         if (animal.position.distanceTo(animal.lastPosition) < 0.1) {
             animal.stuckTimer++;
             if (animal.stuckTimer > 60) {
@@ -388,7 +320,6 @@ export class AnimalSystem {
                     animal.wanderState.waypoint = null;
                 }
                 
-                // Forza movimento casuale
                 const randomDirection = new THREE.Vector3(
                     (Math.random() - 0.5) * 2,
                     0,
@@ -404,10 +335,6 @@ export class AnimalSystem {
         animal.lastPosition.copy(animal.position);
     }
 
-    // =============================================
-    // HELPER PER DIREZIONE PENDENZA
-    // =============================================
-
     getSlopeDirection(x, z) {
         const offset = 1;
         const h1 = this.getHeightAtPosition(x - offset, z);
@@ -415,17 +342,13 @@ export class AnimalSystem {
         const h3 = this.getHeightAtPosition(x, z - offset);
         const h4 = this.getHeightAtPosition(x, z + offset);
         
-        const dx = (h2 - h1) / (offset * 2);
-        const dz = (h4 - h3) / (offset * 2);
+        const dx = (h2 - h1) / (offset * 2); // endenza lungo l'asse x
+        const dz = (h4 - h3) / (offset * 2); // pendenza lungo l'asse z
         
         if (Math.abs(dx) < 0.01 && Math.abs(dz) < 0.01) return null;
         
         return new THREE.Vector3(dx, 0, dz).normalize();
     }
-    
-    // =============================================
-    // ANIMAZIONE
-    // =============================================
     
     updateAnimalAnimation(animal) {
         animal.animationTime += 0.1;
@@ -439,56 +362,19 @@ export class AnimalSystem {
         }
     }
     
-    
-    // =============================================
-    // SISTEMA BIOLOGICO
-    // =============================================
-    
     updateAnimalBiology(animal) {
         animal.age++;
         
-        // Consumo energia/risorse base
-        animal.energy = Math.max(0, animal.energy - 0.02);
-        animal.thirst = Math.max(0, animal.thirst - 0.05);
-        animal.hunger = Math.max(0, animal.hunger - 0.03);
-        
-        // Effetti della mancanza di risorse
-        if (animal.energy < 20) {
-            animal.health = Math.max(0, animal.health - 0.1);
-        }
-        
-        if (animal.thirst < 10) {
-            animal.health = Math.max(0, animal.health - 0.2);
-        }
-        
-        if (animal.hunger < 10) {
-            animal.health = Math.max(0, animal.health - 0.15);
-        }
-        
-        // Recupero salute se ben nutrito
-        if (animal.energy > 80 && animal.thirst > 80 && animal.hunger > 80) {
-            animal.health = Math.min(animal.data.energy, animal.health + 0.05);
-        }
-        
-        // Morte per età o salute
-        if (animal.age > animal.maxAge || animal.health <= 0) {
+        if (animal.age > animal.maxAge) {
             this.animalDeath(animal);
         }
     }
     
     animalDeath(animal) {
-        
-        // Rimuovi animale
         this.removeAnimal(animal);
     }
-
-    
-    // =============================================
-    // GESTIONE POPOLAZIONE
-    // =============================================
     
     managePopulation() {
-        // Rimuovi animali troppo lontani
         for (let i = this.animals.length - 1; i >= 0; i--) {
             const animal = this.animals[i];
             const distance = animal.position.distanceTo(this.playerPosition);
@@ -522,10 +408,6 @@ export class AnimalSystem {
         });
     }
     
-    // =============================================
-    // UTILITY
-    // =============================================
-    
     generateId() {
         return 'animal_' + Math.random().toString(36).substr(2, 9);
     }
@@ -552,35 +434,12 @@ export class AnimalSystem {
         return stats;
     }
     
-    // =============================================
-    // METODI PUBBLICI PER CONTROLLO
-    // =============================================
-    
     addAnimal(type, x, z) {
         return this.spawnAnimal(type, x, z);
     }
     
-    removeAnimalById(id) {
-        const animal = this.getAnimalById(id);
-        if (animal) {
-            this.removeAnimal(animal);
-            return true;
-        }
-        return false;
-    }
-    
     setPlayerPosition(position) {
         this.playerPosition = position;
-    }
-
-    enable() {
-        this.enabled = true;
-        console.log('🦌 Animal system enabled');
-    }
-
-    disable() {
-        this.enabled = false;
-        console.log('🦌 Animal system disabled');
     }
 
     toggle() {
@@ -640,7 +499,6 @@ export class AnimalSystem {
             
             // Find the actual mesh and bones
             this.setupWolfModelData();
-            this.spawnAnimal('wolf', 0,-44.01567923577642)
             
             console.log('🐺 Wolf model template loaded successfully');
         } catch (error) {
@@ -698,7 +556,7 @@ export class AnimalSystem {
             console.log('🦴 Bone names:');
             let bones = []
             this.wolfSkeleton.bones.forEach((bone, index) => {
-            bones.push({ index, name: bone.name });
+                bones.push({ index, name: bone.name });
             });
             console.log(bones);
         }
@@ -719,35 +577,29 @@ export class AnimalSystem {
             animal.bodyWave = 0;
         }
         
-        // === ANIMAZIONE CORPO ===
         this.animateWolfBody(animal, bones, time, isMoving, speed);
         
-        // === ANIMAZIONE ZAMPE ===
         if (isMoving) {
             this.animateWolfLegs(animal, bones, speed);
         } else {
             this.animateWolfIdle(animal, bones, time);
         }
         
-        // === ANIMAZIONE TESTA E CODA ===
         this.animateWolfHeadAndTail(animal, bones, time, isMoving);
     }
 
     animateWolfBody(animal, bones, time, isMoving, speed) {
         const normalizedSpeed = Math.min(speed / animal.data.speed, 1);
         
-        // Movimento del corpo durante la camminata
         if (isMoving) {
             animal.bodyWave += normalizedSpeed * 0.2;
             
             // Spine1 - movimento principale del corpo
             if (bones.spine1) {
                 const defaultRot = bones.spine1.userData.defaultRotation;
-                // Movimento laterale durante la camminata
                 bones.spine1.rotation.y = defaultRot.y + Math.sin(animal.bodyWave) * 0.08 * normalizedSpeed;
-                // Leggero movimento verticale  
                 bones.spine1.rotation.z = defaultRot.z + Math.sin(animal.bodyWave * 0.5) * 0.04 * normalizedSpeed;
-                bones.spine1.rotation.x = defaultRot.x; // Mantieni default per x
+                bones.spine1.rotation.x = defaultRot.x; 
             }
             
             // Chest - movimento secondario
@@ -756,21 +608,7 @@ export class AnimalSystem {
                 // Movimento opposto alla spine per naturalezza
                 bones.chest.rotation.y = defaultRot.y + Math.sin(animal.bodyWave + Math.PI * 0.3) * 0.05 * normalizedSpeed;
                 bones.chest.rotation.z = defaultRot.z + Math.sin(animal.bodyWave * 0.7) * 0.03 * normalizedSpeed;
-                bones.chest.rotation.x = defaultRot.x; // Mantieni default per x
-            }
-        } else {
-            // Movimento di respirazione quando fermo
-            const breathingIntensity = 0.02;
-            const breathingSpeed = 0.8;
-            
-            if (bones.spine1) {
-                const defaultRot = bones.spine1.userData.defaultRotation;
-                bones.spine1.rotation.set(defaultRot.x, defaultRot.y, defaultRot.z + Math.sin(time * breathingSpeed) * breathingIntensity);
-            }
-            
-            if (bones.chest) {
-                const defaultRot = bones.chest.userData.defaultRotation;
-                bones.chest.rotation.set(defaultRot.x, defaultRot.y, defaultRot.z + Math.sin(time * breathingSpeed + Math.PI * 0.3) * breathingIntensity * 0.7);
+                bones.chest.rotation.x = defaultRot.x; 
             }
         }
     }
@@ -778,34 +616,32 @@ export class AnimalSystem {
     // Animazione delle zampe durante la camminata
     animateWolfLegs(animal, bones, speed) {
         const normalizedSpeed = Math.min(speed / animal.data.speed, 1);
-        const walkSpeed = 0.15 + (normalizedSpeed * 0.1); // Velocità adattiva
+        const walkSpeed = 0.15 + (normalizedSpeed * 0.1);
         
         animal.walkCycle += walkSpeed;
         
-        // Pattern di camminata quadrupede realistico
-        // Fase: Front Left -> Back Right -> Front Right -> Back Left
+        // Front Left -> Back Right -> Front Right -> Back Left
         const phases = {
             frontLeft: animal.walkCycle,
-            frontRight: animal.walkCycle + Math.PI,
-            backLeft: animal.walkCycle + Math.PI * 0.5,
-            backRight: animal.walkCycle + Math.PI * 1.5
+            frontRight: animal.walkCycle + Math.PI, // sfasamento di 180 gradi
+            backLeft: animal.walkCycle + Math.PI * 0.5, // sfasamento di 90 gradi
+            backRight: animal.walkCycle + Math.PI * 1.5 // sfasamento di 270 gradi
         };
         
-        // Animazione zampe anteriori
+        // zampe anteriori
         this.animateFrontLeg(bones.frontRumpL, bones.frontHipL, bones.frontKneeL, bones.frontAnkleL, bones.frontToes1L, phases.frontLeft, 'left');
         this.animateFrontLeg(bones.frontRumpR, bones.frontHipR, bones.frontKneeR, bones.frontAnkleR, bones.frontToes1R, phases.frontRight, 'right');
         
-        // Animazione zampe posteriori
+        // zampe posteriori
         this.animateBackLeg(bones.backHipL, bones.backKneeL, bones.backAnkleL, bones.backToes1L, phases.backLeft, 'left');
         this.animateBackLeg(bones.backHipR, bones.backKneeR, bones.backAnkleR, bones.backToes1R, phases.backRight, 'right');
     }
 
-    // Animazione specifica per zampe anteriori - ASSE Z per movimento principale
     animateFrontLeg(rump, hip, knee, ankle, toes, phase, side) {
-        const stepRange = 0.4;        // Range di movimento per il passo
-        const kneeFlexion = 0.3;     // Flessione del ginocchio
-        const ankleCompensation = 0.2; // Compensazione caviglia
-        
+        const stepRange = 0.4;        // range di movimento per il passo
+        const kneeFlexion = 0.3;     // flessione del ginocchio
+        const ankleCompensation = 0.2;
+
         const sideMultiplier = side === 'left' ? 1 : -1;
         const sinValue = Math.sin(phase);
         
@@ -820,104 +656,89 @@ export class AnimalSystem {
             }
         }
         
-        // Movimento del hip (braccio) - MOVIMENTO PRINCIPALE SU ASSE Z
         if (hip) {
             const defaultRot = hip.userData.defaultRotation;
             if (defaultRot) {
                 hip.rotation.x = defaultRot.x;
                 hip.rotation.y = defaultRot.y;
-                // Movimento principale avanti/indietro lungo Z
+                // si muove avanti/indietro lungo Z
                 hip.rotation.z = defaultRot.z + sinValue * stepRange;
             }
         }
         
-        // Movimento del knee (gomito) - FLESSIONE SU ASSE Z
         if (knee) {
             const defaultRot = knee.userData.defaultRotation;
             if (defaultRot) {
                 knee.rotation.x = defaultRot.x;
                 knee.rotation.y = defaultRot.y;
-                // Flessione del ginocchio durante il sollevamento
+                // flessione del ginocchio durante il sollevamento
                 const flexion = Math.max(0, sinValue) * kneeFlexion;
                 knee.rotation.z = defaultRot.z + flexion;
             }
         }
         
-        // Movimento dell'ankle (polso) - COMPENSAZIONE SU ASSE Z
         if (ankle) {
             const defaultRot = ankle.userData.defaultRotation;
             if (defaultRot) {
                 ankle.rotation.x = defaultRot.x;
                 ankle.rotation.y = defaultRot.y;
-                // Compensazione per mantenere la zampa dritta
                 const compensation = Math.max(0, sinValue) * ankleCompensation;
                 ankle.rotation.z = defaultRot.z - compensation;
             }
         }
         
-        // Movimento delle dita - FLESSIONE SU ASSE Z
         if (toes) {
             const defaultRot = toes.userData.defaultRotation;
             if (defaultRot) {
                 toes.rotation.x = defaultRot.x;
                 toes.rotation.y = defaultRot.y;
-                // Leggera flessione durante il contatto con il suolo
                 const toeFlex = Math.max(0, -sinValue) * 0.15;
                 toes.rotation.z = defaultRot.z + toeFlex;
             }
         }
     }
 
-    // Animazione specifica per zampe posteriori - ASSE Z per movimento principale
     animateBackLeg(hip, knee, ankle, toes, phase, side) {
-        const stepRange = 0.5;        // Range di movimento per il passo (più ampio delle anteriori)
-        const kneeFlexion = 0.4;     // Flessione del ginocchio
-        const ankleCompensation = 0.3; // Compensazione caviglia
-        
+        const stepRange = 0.5;        // range di movimento per il passo
+        const kneeFlexion = 0.4;     // flessione del ginocchio
+        const ankleCompensation = 0.3; // compensazione caviglia
+
         const sinValue = Math.sin(phase);
         
-        // Movimento del hip (anca) - MOVIMENTO PRINCIPALE SU ASSE Z
         if (hip) {
             const defaultRot = hip.userData.defaultRotation;
             if (defaultRot) {
                 hip.rotation.x = defaultRot.x;
                 hip.rotation.y = defaultRot.y;
-                // Movimento principale avanti/indietro lungo Z (più ampio delle zampe anteriori)
                 hip.rotation.z = defaultRot.z + sinValue * stepRange;
             }
         }
         
-        // Movimento del knee (ginocchio) - FLESSIONE SU ASSE Z  
         if (knee) {
             const defaultRot = knee.userData.defaultRotation;
             if (defaultRot) {
                 knee.rotation.x = defaultRot.x;
                 knee.rotation.y = defaultRot.y;
-                // Flessione più pronunciata per le zampe posteriori
                 const flexion = Math.max(0, sinValue) * kneeFlexion;
                 knee.rotation.z = defaultRot.z + flexion;
             }
         }
         
-        // Movimento dell'ankle (caviglia) - COMPENSAZIONE SU ASSE Z
         if (ankle) {
             const defaultRot = ankle.userData.defaultRotation;
             if (defaultRot) {
                 ankle.rotation.x = defaultRot.x;
                 ankle.rotation.y = defaultRot.y;
-                // Compensazione per il movimento naturale
                 const compensation = Math.max(0, sinValue) * ankleCompensation;
                 ankle.rotation.z = defaultRot.z - compensation;
             }
         }
         
-        // Movimento delle dita - FLESSIONE SU ASSE Z
         if (toes) {
             const defaultRot = toes.userData.defaultRotation;
             if (defaultRot) {
                 toes.rotation.x = defaultRot.x;
                 toes.rotation.y = defaultRot.y;
-                // Spinta durante il contatto con il suolo
                 const toeFlex = Math.max(0, -sinValue) * 0.2;
                 toes.rotation.z = defaultRot.z + toeFlex;
             }
@@ -970,20 +791,15 @@ export class AnimalSystem {
         }
     }
 
-    // Animazione testa e coda
     animateWolfHeadAndTail(animal, bones, time, isMoving) {
-        // Testa - movimento naturale
         if (bones.head) {
-            // Movimento di osservazione
             bones.head.rotation.y = Math.sin(time * 0.3) * 0.2;
             
-            // Leggero movimento verticale durante la camminata
             if (isMoving) {
                 bones.head.rotation.x = Math.sin(animal.walkCycle * 2) * 0.1;
             }
         }
         
-        // Coda - movimento fluido
         if (bones.tail0) {
             const tailSpeed = isMoving ? 2 : 1;
             const tailIntensity = isMoving ? 0.6 : 0.3;
@@ -992,7 +808,6 @@ export class AnimalSystem {
             bones.tail0.rotation.z = Math.sin(time * tailSpeed * 0.7) * tailIntensity * 0.5;
         }
         
-        // Propagazione del movimento della coda
         if (bones.tail1) {
             bones.tail1.rotation.y = Math.sin(time * 2.2) * 0.4;
         }
@@ -1001,35 +816,6 @@ export class AnimalSystem {
         }
         if (bones.tail3) {
             bones.tail3.rotation.y = Math.sin(time * 2.8) * 0.2;
-        }
-    }
-
-    // Metodo per aggiustare la velocità dell'animazione in base al movimento
-    adjustAnimationSpeed(animal, bones, speed) {
-        const normalizedSpeed = Math.min(speed / animal.data.speed, 1);
-        
-        // Adatta la velocità dell'animazione alla velocità di movimento
-        if (normalizedSpeed > 0.8) {
-            // Corsa - movimenti più rapidi e ampi
-            return {
-                walkSpeedMultiplier: 1.5,
-                stepIntensity: 1.3,
-                bodyMovement: 1.2
-            };
-        } else if (normalizedSpeed > 0.4) {
-            // Camminata normale
-            return {
-                walkSpeedMultiplier: 1.0,
-                stepIntensity: 1.0,
-                bodyMovement: 1.0
-            };
-        } else {
-            // Camminata lenta
-            return {
-                walkSpeedMultiplier: 0.7,
-                stepIntensity: 0.8,
-                bodyMovement: 0.8
-            };
         }
     }
 
@@ -1230,26 +1016,6 @@ export class AnimalSystem {
         });
     }
 
-    // Metodo aggiuntivo per resettare alle rotazioni di default
-    resetWolfToDefaultPose(animal) {
-        const bones = animal.mesh.userData.bones;
-        if (!bones) return;
-        
-        // Reset a tutte le rotazioni di default
-        Object.values(bones).forEach(bone => {
-            if (bone && bone.userData.defaultRotation) {
-                const defaultRot = bone.userData.defaultRotation;
-                bone.rotation.set(defaultRot.x, defaultRot.y, defaultRot.z);
-            }
-        });
-        
-        // Rimuovi la pose personalizzata
-        delete animal.customPose;
-        delete animal.poseStartTime;
-        
-        console.log('🐺 Wolf reset to default pose');
-    }
-
     createWolfHowlAnimation(animal) {
         const bones = animal.mesh.userData.bones;
         if (!bones) return;
@@ -1257,7 +1023,6 @@ export class AnimalSystem {
         const howlDuration = 180; // 3 seconds at 60fps
         let howlFrame = 0;
         
-        // Salva le posizioni originali per il reset
         const originalRotations = {};
         
         if (bones.head) {
@@ -1284,12 +1049,10 @@ export class AnimalSystem {
             const progress = howlFrame / howlDuration;
             const intensity = Math.sin(progress * Math.PI);
             
-            // Head up for howling - da -91.99° a -121.39° (movimento di -29.40°)
             if (bones.head) {
                 bones.head.rotation.z = originalRotations.head + (headTargetRotation - originalRotations.head) * intensity;
             }
             
-            // Neck extended - movimenti relativi alle posizioni originarie
             if (bones.neck) {
                 bones.neck.rotation.z = originalRotations.neck + (neckTargetRotation - originalRotations.neck) * intensity;
             }
@@ -1297,20 +1060,15 @@ export class AnimalSystem {
                 bones.neck1.rotation.z = originalRotations.neck1 + (neck1TargetRotation - originalRotations.neck1) * intensity;
             }
             
-            // Jaw movement - dalla posizione iniziale (144.51°) raggiunge 140°
             if (bones.jaw) {
                 let jawIntensity;
                 if (progress < 0.3) {
-                    // Chiusura rapida nei primi 30% dell'animazione
                     jawIntensity = progress / 0.3;
                 } else if (progress < 0.7) {
-                    // Resta chiusa tra 30% e 70% (apice dell'ululato)
                     jawIntensity = 1;
                 } else {
-                    // Ritorno graduale alla posizione iniziale negli ultimi 30%
                     jawIntensity = 1 - ((progress - 0.7) / 0.3);
                 }
-                // Interpolazione tra posizione iniziale e target (140°)
                 bones.jaw.rotation.z = originalRotations.jaw + (jawTargetRotation - originalRotations.jaw) * jawIntensity;
             }
         
