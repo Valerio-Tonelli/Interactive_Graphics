@@ -478,7 +478,6 @@ export class AnimalSystem {
     }
     
     animalDeath(animal) {
-        console.log(`${animal.type} (${animal.id}) died at age ${animal.age}`);
         
         // Rimuovi animale
         this.removeAnimal(animal);
@@ -680,7 +679,6 @@ export class AnimalSystem {
         // Find and store bone references
         this.setupWolfBoneReferences(wolfMesh, wolfMesh);
         
-        console.log('🐺 Wolf model cloned and configured successfully');
         return wolfMesh;
     }
 
@@ -1168,8 +1166,6 @@ export class AnimalSystem {
         
         // Inizializza le rotazioni di default e salva le originali
         this.initializeWolfDefaultRotations(bones);
-        
-        console.log('🦴 Mapped bones:', Object.keys(bones));
     }
 
     initializeWolfDefaultRotations(bones) {

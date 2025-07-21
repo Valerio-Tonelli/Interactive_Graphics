@@ -46,6 +46,7 @@ class PlanetaryExplorer {
             puddles: [],
             maxPuddles: 20,
             puddleLifetime: 300,
+            puddleSlopeThreshold: 0.15,
             windStrength: 0.0
         };
         
@@ -243,7 +244,7 @@ class PlanetaryExplorer {
         const animalControls = document.createElement('div');
         animalControls.id = 'animalControls';
         animalControls.innerHTML = `
-            <div style="position: absolute; top: 150px; left: 20px; color: white; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; font-size: 14px; z-index: 100;">
+            <div style="position: absolute; top: 170px; left: 20px; color: white; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; font-size: 14px; z-index: 100;">
                 <strong>🦌 Animal Controls:</strong><br>
                 <button class="animal-button" onclick="game.spawnRandomAnimal()">Spawn Animal (O)</button><br>
                 <button class="animal-button" onclick="game.toggleAnimalSystem()">Toggle System (I)</button><br>
@@ -327,6 +328,7 @@ class PlanetaryExplorer {
         const lifetimes = new Float32Array(rainCount);
         
         for (let i = 0; i < rainCount; i++) {
+            // ogni particella occupa tre posizioni consecutive
             const i3 = i * 3;
             
             positions[i3] = (Math.random() - 0.5) * 200;
@@ -398,8 +400,10 @@ class PlanetaryExplorer {
     }
     
     updateWeatherSystem() {
+        // transizione graduale dell'intensità della pioggi
         if (this.weatherSystem.rainIntensity !== this.weatherSystem.targetRainIntensity) {
             const diff = this.weatherSystem.targetRainIntensity - this.weatherSystem.rainIntensity;
+            // effetto easing: valori più alti creano cambiamenti più rapidi, mentre valori più bassi rendono la transizione più lenta
             this.weatherSystem.rainIntensity += diff * 0.02;
             
             if (Math.abs(diff) < 0.01) {
@@ -428,6 +432,7 @@ class PlanetaryExplorer {
         
         const playerPos = this.player.position;
         
+        // invece di creare nuove particelle, riutilizziamo quelle esistenti
         for (let i = 0; i < positions.length; i += 3) {
             const particleIndex = i / 3;
             
@@ -492,7 +497,7 @@ class PlanetaryExplorer {
             size: 0.2,
             transparent: true,
             opacity: 0.8,
-            blending: THREE.AdditiveBlending
+            blending: THREE.AdditiveBlending // crea un effetto di sovrapposizione luminosa che simula la rifrazione della luce attraverso le goccioline d'acqua
         });
         
         const splash = new THREE.Points(splashGeometry, splashMaterial);
@@ -535,8 +540,12 @@ class PlanetaryExplorer {
             
             const puddleX = this.player.position.x + (Math.random() - 0.5) * 40;
             const puddleZ = this.player.position.z + (Math.random() - 0.5) * 40;
+
+            // Verifica la pendenza del terreno nella posizione proposta
+            const slope = this.getSlope(puddleX, puddleZ);
             
-            // Controlla se c'è già una pozza nelle vicinanze
+            // Controlla se c'è già una pozza nelle vicinanze usando la distanza euclidea
+            // l' asse y non ci interessa perché le pozze sono sul terreno
             const tooClose = this.weatherSystem.puddles.some(puddle => {
                 const distance = Math.sqrt(
                     Math.pow(puddle.mesh.position.x - puddleX, 2) +
@@ -545,7 +554,7 @@ class PlanetaryExplorer {
                 return distance < 3;
             });
             
-            if (!tooClose) {
+            if (!tooClose && slope < this.weatherSystem.puddleSlopeThreshold) {
                 this.createPuddle(puddleX, puddleZ);
             }
         }
@@ -567,7 +576,7 @@ class PlanetaryExplorer {
                 // Effetto di evaporazione
                 const evaporationProgress = 1 - (puddle.lifetime / puddle.maxLifetime);
                 puddle.mesh.material.opacity = 0.7 * (1 - evaporationProgress);
-                puddle.mesh.scale.setScalar(1 - evaporationProgress * 0.3);
+                puddle.mesh.scale.setScalar(1 - evaporationProgress * 0.3); // la scala si riduce del 30%
                 
                 // Rimuovi pozza quando evaporata
                 if (puddle.lifetime <= 0) {
@@ -674,7 +683,7 @@ class PlanetaryExplorer {
         const segments = 256;
         
         this.terrainGeometry = new THREE.PlaneGeometry(size, size, segments, segments);
-        this.terrainGeometry.rotateX(-Math.PI / 2);
+        this.terrainGeometry.rotateX(-Math.PI / 2); // trasforma il piano dalla sua orientazione verticale predefinita (piano XY) a quella orizzontale (piano XZ)
         
         const vertices = this.terrainGeometry.attributes.position.array;
         
@@ -691,7 +700,7 @@ class PlanetaryExplorer {
         }
         
         this.terrainGeometry.attributes.position.needsUpdate = true;
-        this.terrainGeometry.computeVertexNormals();
+        this.terrainGeometry.computeVertexNormals(); // ricalcola le normali dei vertici necessarie per l'illuminazione corretta
         
         const terrainMaterial = new THREE.MeshLambertMaterial({
             map: this.createBlendedTerrainTexture(),
@@ -721,6 +730,9 @@ class PlanetaryExplorer {
         const imageData = ctx.createImageData(size, size);
         
         for (let i = 0; i < imageData.data.length; i += 4) {
+            // itera attraverso ogni pixel, convertendo l'indice lineare in coordinate 2D
+            // ogni pixel è rappresentato da 4 valori (RGBA)
+            // i / 4 = indice del pixel corrente
             const x = (i / 4) % size;
             const y = Math.floor((i / 4) / size);
             
@@ -731,7 +743,7 @@ class PlanetaryExplorer {
             let rockR = 100, rockG = 100, rockB = 100;
             let sandR = 180, sandG = 160, sandB = 100;
             
-            const variation = this.noise(x * 0.1, y * 0.1) * 0.3 + 0.7;
+            const variation = this.noise(x * 0.1, y * 0.1) * 0.3 + 0.7; // genera valori tra 0.7 e 1.0
             grassR *= variation; grassG *= variation; grassB *= variation;
             rockR *= variation; rockG *= variation; rockB *= variation;
             sandR *= variation; sandG *= variation; sandB *= variation;
@@ -752,16 +764,16 @@ class PlanetaryExplorer {
                 b = b + (sandB - b) * sandFactor * 0.6;
             }
             
-            imageData.data[i] = Math.max(0, Math.min(255, r));
-            imageData.data[i + 1] = Math.max(0, Math.min(255, g));
-            imageData.data[i + 2] = Math.max(0, Math.min(255, b));
-            imageData.data[i + 3] = 255;
+            imageData.data[i] = Math.max(0, Math.min(255, r)); // Red
+            imageData.data[i + 1] = Math.max(0, Math.min(255, g)); // Green
+            imageData.data[i + 2] = Math.max(0, Math.min(255, b)); // Blue
+            imageData.data[i + 3] = 255; // Alpha (opaco)
         }
         
         ctx.putImageData(imageData, 0, 0);
         const texture = new THREE.CanvasTexture(canvas);
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.repeat.set(4, 4);
+        texture.repeat.set(4, 4); // ripete il pattern 4 volte in entrambe le direzioni
         return texture;
     }
     
@@ -769,17 +781,20 @@ class PlanetaryExplorer {
         this.sunLight = new THREE.DirectionalLight(0xffffff, 1);
         this.sunLight.castShadow = true;
         
+        // Risoluzione della texture delle ombre
         this.sunLight.shadow.mapSize.width = 4096;
         this.sunLight.shadow.mapSize.height = 4096;
+
         this.sunLight.shadow.camera.near = 0.1;
         this.sunLight.shadow.camera.far = 300;
         
+        // Area quadrata di 300x300 unità dove si calcolano le ombre
         this.sunLight.shadow.camera.left = -150;
         this.sunLight.shadow.camera.right = 150;
         this.sunLight.shadow.camera.top = 150;
         this.sunLight.shadow.camera.bottom = -150;
         
-        this.sunLight.shadow.bias = -0.0001;
+        this.sunLight.shadow.bias = -0.0001; // offset per prevenire pixel tremolanti nelle ombre
         this.sunLight.shadow.normalBias = 0.02;
         
         this.sunLight.position.set(50, 100, 50);
@@ -789,6 +804,8 @@ class PlanetaryExplorer {
         
         this.moonLight = new THREE.DirectionalLight(0x4444ff, 0.2);
         this.moonLight.castShadow = true;
+
+        // Risoluzione inferiore rispetto al sole
         this.moonLight.shadow.mapSize.width = 2048;
         this.moonLight.shadow.mapSize.height = 2048;
         this.moonLight.shadow.camera.near = 0.1;
@@ -798,12 +815,15 @@ class PlanetaryExplorer {
         this.moonLight.shadow.camera.top = 100;
         this.moonLight.shadow.camera.bottom = -100;
         this.moonLight.shadow.bias = -0.0001;
+
+        this.moonLight.position.set(-50, 100, -50);  // Posizione iniziale opposta al sole
+        this.moonLight.target.position.set(0, 0, 0); // puntamento verso il centro della scena
         this.scene.add(this.moonLight);
         
         this.ambientLight = new THREE.AmbientLight(0x404040, 0.3);
         this.scene.add(this.ambientLight);
         
-        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 400);
+        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 400); // Nebbia lineare che aumenta con la distanza
     }
     
     updateDayNightCycle() {
@@ -812,6 +832,8 @@ class PlanetaryExplorer {
             this.timeSystem.currentTime = 0;
         }
         
+        // converte il tempo lineare in una posizione circolare
+        // l'offset di -Math.PI / 2 fa iniziare il sole dall'orizzonte est
         const sunAngle = (this.timeSystem.currentTime / 24) * Math.PI * 2 - Math.PI / 2;
         this.timeSystem.sunPosition.set(
             Math.cos(sunAngle) * 150,
@@ -874,7 +896,7 @@ class PlanetaryExplorer {
             const playerPos = this.player.position;
             this.sunLight.target.position.copy(playerPos);
             
-            const shadowSize = 80 + (1 - sunHeight / 150) * 40;
+            const shadowSize = 80 + (1 - sunHeight / 150) * 40; // espande dinamicamente l'area delle ombre quando il sole è basso nel cielo
             
             this.sunLight.shadow.camera.left = -shadowSize;
             this.sunLight.shadow.camera.right = shadowSize;
@@ -891,6 +913,7 @@ class PlanetaryExplorer {
     
     createSkybox() {
         const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+        // GLSL
         const skyMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 time: { value: 0 },
@@ -898,48 +921,36 @@ class PlanetaryExplorer {
             },
             vertexShader: `
                 varying vec3 vWorldPosition;
+                // eseguita per ogni vertice
                 void main() {
                     vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-                    vWorldPosition = worldPosition.xyz;
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    vWorldPosition = worldPosition.xyz; // estrae le componenti X, Y, Z dalle coordinate omogenee e le assegna alla variabile varying
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); // posizione finale sullo schermo del vertice
                 }
             `,
             fragmentShader: `
                 uniform float time;
                 uniform vec3 sunPosition;
-                varying vec3 vWorldPosition;
-                
-                float random(vec2 st) {
-                    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-                }
+                varying vec3 vWorldPosition; // riceve la posizione mondiale calcolata nel vertex shader
                 
                 void main() {
-                    vec3 direction = normalize(vWorldPosition);
-                    
-                    vec2 starCoord = direction.xz * 20.0;
-                    float star = random(floor(starCoord));
-                    star *= random(floor(starCoord + 1.0));
-                    star = step(0.99, star) * (0.5 + 0.5 * sin(time * 3.0 + star * 10.0));
-                    
-                    float sunDot = dot(direction, normalize(sunPosition));
-                    float horizon = abs(direction.y);
+                    vec3 direction = normalize(vWorldPosition); // direzione dal centro della sfera al pixel corrente
+
+                    float sunDot = dot(direction, normalize(sunPosition)); // prodotto scalare tra direzione pixel e direzione sole
                     
                     vec3 skyColor = mix(
-                        vec3(0.1, 0.1, 0.3),
-                        vec3(0.5, 0.7, 1.0),
-                        max(0.0, sunPosition.y / 200.0)
+                        vec3(0.1, 0.1, 0.3), // Colore notturno (blu scuro)
+                        vec3(0.5, 0.7, 1.0), // Colore diurno (azzurro)
+                        max(0.0, sunPosition.y / 200.0) // Fattore di interpolazione
                     );
                     
                     float sunGlow = pow(max(0.0, sunDot), 32.0) * 0.5;
                     skyColor += vec3(1.0, 0.8, 0.6) * sunGlow;
                     
-                    float nightFactor = 1.0 - max(0.0, sunPosition.y / 200.0);
-                    skyColor += vec3(star) * nightFactor;
-                    
-                    gl_FragColor = vec4(skyColor, 1.0);
+                    gl_FragColor = vec4(skyColor, 1.0); // colore finale del pixel
                 }
             `,
-            side: THREE.BackSide
+            side: THREE.BackSide // vediamo il cielo dall'interno della sfera
         });
         
         this.skybox = new THREE.Mesh(skyGeometry, skyMaterial);
@@ -1032,10 +1043,11 @@ class PlanetaryExplorer {
                 resource.mesh.rotation.y += resource.rotationSpeed;
                 resource.mesh.rotation.x += resource.rotationSpeed * 0.5;
                 
+                // effetto lievitazione
                 resource.mesh.position.y += Math.sin(Date.now() * 0.003 + index) * 0.01;
                 
                 const distance = this.player.position.distanceTo(resource.mesh.position);
-                if (distance < 3) {
+                if (distance < 4) {
                     resource.mesh.material.emissive.setHex(0x004488);
                     resource.mesh.scale.setScalar(1.2);
                     
@@ -1075,9 +1087,9 @@ class PlanetaryExplorer {
             positions[i3 + 2] = position.z;
             
             const direction = new THREE.Vector3(
-                (Math.random() - 0.5) * 2,
-                Math.random(),
-                (Math.random() - 0.5) * 2
+                (Math.random() - 0.5) * 2, // genera valori tra -1 e +1
+                Math.random(), // forza verso l'alto
+                (Math.random() - 0.5) * 2 // genera valori tra -1 e +1
             ).normalize();
             
             velocities.push(direction.multiplyScalar(0.2 + Math.random() * 0.3));
@@ -1096,6 +1108,7 @@ class PlanetaryExplorer {
         this.scene.add(effectParticles);
         
         let lifetime = 60;
+        // dissolvenza graduale
         const animateEffect = () => {
             const positions = effectParticles.geometry.attributes.position.array;
             
@@ -1307,6 +1320,7 @@ class PlanetaryExplorer {
         document.getElementById('heightDisplay').textContent = Math.round(this.player.position.y - 1.8);
     }
     
+    // campionamento del terreno con interpolazione bilineare
     getHeightAtPosition(x, z) {
         const halfSize = this.terrainSize / 2;
         
@@ -1331,6 +1345,7 @@ class PlanetaryExplorer {
         
         const h12 = h1 * (1 - fx) + h2 * fx;
         const h34 = h3 * (1 - fx) + h4 * fx;
+
         const finalHeight = h12 * (1 - fz) + h34 * fz;
         
         return finalHeight;
@@ -1436,9 +1451,7 @@ class PlanetaryExplorer {
         if (!this.animalSystem) return;
         
         const stats = this.animalSystem.getAnimalStats();
-        
-        console.log('📊 Animal Statistics:', stats);
-        
+                
         this.displayAnimalStatsInUI(stats);
     }
 
@@ -1461,8 +1474,6 @@ class PlanetaryExplorer {
 
             const animalStats = document.getElementById('animalStats');
             if(animalStats) this.showAnimalStats();
-
-            console.log('🦌 Animal stats updated:', statsData);
         });
     }
 
