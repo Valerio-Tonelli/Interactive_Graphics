@@ -7,7 +7,7 @@ class PlanetaryExplorer {
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         
-        // Configurazione renderer per ombre e qualità
+        // configurazione renderer per ombre e qualità
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -17,7 +17,7 @@ class PlanetaryExplorer {
         
         document.getElementById('gameContainer').appendChild(this.renderer.domElement);
         
-        // Sistema temporale per ciclo giorno-notte
+        // sistema temporale per ciclo giorno-notte
         this.timeSystem = {
             currentTime: 12.0,
             timeSpeed: 0.01,
@@ -25,7 +25,7 @@ class PlanetaryExplorer {
             moonPosition: new THREE.Vector3()
         };
         
-        // Sistema del giocatore
+        // istema del giocatore
         this.player = {
             position: new THREE.Vector3(0, 10, 0),
             velocity: new THREE.Vector3(),
@@ -35,7 +35,7 @@ class PlanetaryExplorer {
             resources: 0
         };
         
-        // Sistema meteo
+        // sistema meteo
         this.weatherSystem = {
             isRaining: false,
             rainIntensity: 0.0,
@@ -50,7 +50,7 @@ class PlanetaryExplorer {
             windStrength: 0.0
         };
         
-        // Sistema vento
+        // sistema vento
         this.windSystem = {
             enabled: false,
             direction: new THREE.Vector3(1, 0, 0.5).normalize(),
@@ -67,17 +67,17 @@ class PlanetaryExplorer {
             
         };
         
-        // Controlli input
+        // controlli input
         this.keys = {};
         this.mouse = { x: 0, y: 0, sensitivity: 0.002 };
         this.camera.rotation.order = 'YXZ';
         
-        // Array per vegetazione animata
+        // array per vegetazione animata
         this.vegetation = [];
         this.resources = [];
         this.animalSystem = null;
         
-        // Contatore frame per UI updates
+        // contatore frame per UI updates
         this.frameCount = 0;
         
         this.init();
@@ -108,24 +108,24 @@ class PlanetaryExplorer {
         
         const time = Date.now() * 0.001;
         
-        // Aggiorna effetti del vento
+        // aggiorna effetti del vento
         this.updateWindEffects(this.windSystem.strength, time);
         
-        // Aggiorna UI
+        // aggiorna UI
         this.updateWindUI(this.windSystem.strength);
     }
 
 
     updateWindEffects(totalWindStrength, time) {
-        // Aggiorna weatherSystem per compatibilità
+        // aggiorna weatherSystem per compatibilità
         this.weatherSystem.windStrength = totalWindStrength;
         
-        // Effetto del vento sulla pioggia (se attiva)
+        // effetto del vento sulla pioggia (se attiva)
         if (this.weatherSystem.rainParticles && this.weatherSystem.rainIntensity > 0) {
             this.updateRainWithWind(totalWindStrength, time);
         }
 
-        // Effetto del vento sulla vegetazione
+        // effetto del vento sulla vegetazione
         this.updateVegetationAnimation(totalWindStrength, time);
     }
 
@@ -145,11 +145,11 @@ class PlanetaryExplorer {
         }
     }
 
-    // Controlli vento
+    // controlli vento
     setWindPattern(patternName) {
         if (this.windSystem.patterns[patternName]) {
             this.windSystem.currentPattern = patternName;
-            
+            this.windSystem.strength = this.windSystem.patterns[patternName].strength;
             console.log(`💨 Wind pattern set to: ${patternName}`);
             this.updateWindUI();
         }
@@ -197,30 +197,30 @@ class PlanetaryExplorer {
 
     updateVegetationAnimation(totalWindStrength, time) {
         this.vegetation.forEach((tree, index) => {
-            // Intensità vento dinamica
+            // intensità vento dinamica
             const windStrength = totalWindStrength * (0.8 + Math.sin(time * 0.2 + index) * 0.4);
             const windSpeed = 1.5 + totalWindStrength * 2;
 
             const windOffset = tree.windOffset + time * windSpeed;
             
-            // Direzione del vento applicata
+            // direzione del vento applicata
             const windDirectionX = this.windSystem.direction.x * windStrength;
             const windDirectionZ = this.windSystem.direction.z * windStrength;
             
-            // Oscillazione naturale + vento direzionale
+            // oscillazione naturale + vento direzionale
             const naturalSwayX = Math.sin(windOffset) * 0.2;
             const naturalSwayZ = Math.cos(windOffset * 0.7) * 0.15;
             
             const totalSwayX = naturalSwayX + windDirectionX;
             const totalSwayZ = naturalSwayZ + windDirectionZ;
 
-            // Applica movimento alla corona
-            tree.crown.position.x = tree.basePosition.x + totalSwayX * 0.4;
-            tree.crown.position.z = tree.basePosition.z + totalSwayZ * 0.4;
+            // applica movimento alla corona
+            tree.crown.position.x = tree.basePosition.x + totalSwayX * 0.8;
+            tree.crown.position.z = tree.basePosition.z + totalSwayZ * 0.8;
             tree.crown.rotation.x = totalSwayX * 0.15;
             tree.crown.rotation.z = totalSwayZ * 0.15;
             
-            // Movimento del tronco (più sottile)
+            // movimento del tronco
             tree.trunk.rotation.x = totalSwayX * 0.04;
             tree.trunk.rotation.z = totalSwayZ * 0.04;
             
@@ -232,7 +232,6 @@ class PlanetaryExplorer {
             this.scene,
             (x, z) => this.getHeightAtPosition(x, z),
             (x, z) => this.getSlope(x, z),
-            (x, z) => this.findFlatGround(x, z),
             this.player.position,
             this.vegetation
         );
@@ -419,7 +418,7 @@ class PlanetaryExplorer {
             this.createRandomPuddles();
         }
         
-        // Aggiorna le pozze
+        // aggiorna le pozze
         this.updatePuddles();
         this.updateAtmosphericEffects();
         this.updateWeatherUI();
@@ -569,11 +568,11 @@ class PlanetaryExplorer {
                 puddle.evaporating = true;
             }
             
-            // Aggiorna lifetime
+            // aggiorna lifetime
             if (puddle.evaporating) {
                 puddle.lifetime -= 1;
                 
-                // Effetto di evaporazione
+                // effetto di evaporazione
                 const evaporationProgress = 1 - (puddle.lifetime / puddle.maxLifetime);
                 puddle.mesh.material.opacity = 0.7 * (1 - evaporationProgress);
                 puddle.mesh.scale.setScalar(1 - evaporationProgress * 0.3); // la scala si riduce del 30%
@@ -597,7 +596,7 @@ class PlanetaryExplorer {
     }
 
     updateAtmosphericEffects() {
-        // Aggiorna nebbia in base al tempo
+        // aggiorna nebbia in base al tempo
         if (this.scene.fog) {
             const baseNear = 50;
             const baseFar = 400;
@@ -1261,7 +1260,14 @@ class PlanetaryExplorer {
         
         // Controlla se Shift è premuto per evitare conflitti con controlli vento
         const isShiftHeld = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
-        
+
+        // Controlla se Ctrl è premuto per evitare conflitti con controlli vento
+        const isCtrlHeld = this.keys['ControlLeft'] || this.keys['ControlRight'];
+
+        if (isCtrlHeld) {
+            return; // Non muovere il giocatore se Ctrl è premuto
+        }
+
         if ((this.keys['KeyW'] || this.keys['ArrowUp']) && !isShiftHeld) moveVector.z -= 1;
         if (this.keys['KeyS'] || this.keys['ArrowDown']) moveVector.z += 1;
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveVector.x -= 1;
@@ -1376,33 +1382,6 @@ class PlanetaryExplorer {
         const dz = (h4 - h3) / (offset * 2);
         
         return Math.sqrt(dx * dx + dz * dz);
-    }
-
-    findFlatGround(x, z) {
-        const searchRadius = 5;
-        const samples = 8;
-        
-        let bestDirection = null;
-        let lowestSlope = Infinity;
-        
-        for (let i = 0; i < samples; i++) {
-            const angle = (i / samples) * Math.PI * 2;
-            const testX = x + Math.cos(angle) * searchRadius;
-            const testZ = z + Math.sin(angle) * searchRadius;
-            
-            const slope = this.getSlope(testX, testZ);
-            
-            if (slope < lowestSlope) {
-                lowestSlope = slope;
-                bestDirection = new THREE.Vector3(
-                    testX - x,
-                    0,
-                    testZ - z
-                ).normalize();
-            }
-        }
-        
-        return bestDirection;
     }
     
     animate() {

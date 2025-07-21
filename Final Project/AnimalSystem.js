@@ -3,11 +3,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
 export class AnimalSystem {
-    constructor(scene, getHeightAtPosition, getSlope, findFlatGround, playerPosition, vegetationRef = null) {
+    constructor(scene, getHeightAtPosition, getSlope, playerPosition, vegetationRef = null) {
         this.scene = scene;
         this.getHeightAtPosition = getHeightAtPosition;
         this.getSlope = getSlope;
-        this.findFlatGround = findFlatGround;
         this.playerPosition = playerPosition;
         this.vegetation = vegetationRef;
         
@@ -137,7 +136,7 @@ export class AnimalSystem {
             this.animals.splice(index, 1);
         }
 
-        // Aggiorna conteggio animali
+        // aggiorna conteggio animali
         this.dispatchStatsUpdate();
     }
     
@@ -160,7 +159,7 @@ export class AnimalSystem {
     
         this.frameCount++;
         
-        // Aggiorna tutti gli animali
+        // aggiorna tutti gli animali
         this.animals.forEach(animal => {
             
             this.updateAnimalBehavior(animal);
@@ -341,7 +340,7 @@ export class AnimalSystem {
             animal.velocity.normalize().multiplyScalar(maxSpeed);
         }
         
-        // Aggiorna posizione
+        // aggiorna posizione
         animal.position.add(animal.velocity);
         
         // Collision detection
@@ -365,7 +364,7 @@ export class AnimalSystem {
             }
         }
         
-        // Aggiorna mesh position
+        // aggiorna mesh position
         animal.mesh.position.copy(animal.position);
         
         // Orienta verso direzione movimento con smoothing
